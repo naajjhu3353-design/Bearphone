@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* BEAR PHONE Theme - Electric Blue & Matte Carbon Black */
+    --background: 228 28% 8%;
+    --foreground: 0 0% 98%;
+    --card: 228 25% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 228 25% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 228 20% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 228 20% 15%;
+    --muted-foreground: 228 10% 60%;
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 228 20% 18%;
+    --input: 228 20% 18%;
+    --ring: 211 100% 50%;
+    --radius: 0.625rem;
+    --sidebar-background: 228 28% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 228 20% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 228 20% 18%;
+    --sidebar-ring: 211 100% 50%;
+    
+    /* Custom BEAR PHONE Variables */
+    --electric-blue: #007AFF;
+    --electric-glow: rgba(0, 122, 255, 0.5);
+    --carbon-black: #0F111A;
+    --carbon-light: #1A1D2A;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-carbon text-white font-cairo antialiased;
+    background-color: #0F111A;
+  }
+  
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+  
+  [dir="ltr"] {
+    text-align: left;
+  }
+}
+
+@layer components {
+  /* Electric Blue Glow Effects */
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(0, 122, 255, 0.5);
+  }
+  
+  .glow-blue-lg {
+    box-shadow: 0 0 40px rgba(0, 122, 255, 0.6);
+  }
+  
+  .glow-text {
+    text-shadow: 0 0 10px rgba(0, 122, 255, 0.5);
+  }
+  
+  .glow-text-lg {
+    text-shadow: 0 0 20px rgba(0, 122, 255, 0.8), 0 0 30px rgba(0, 122, 255, 0.6);
+  }
+  
+  /* Bear Claw Animation */
+  .bear-claw {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .bear-claw::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.3), transparent);
+    transform: rotate(-15deg);
+    animation: claw-swipe 2s ease-in-out infinite;
+  }
+  
+  /* Glass Effect */
+  .glass {
+    background: rgba(26, 29, 42, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 122, 255, 0.2);
+  }
+  
+  /* Carbon Card */
+  .carbon-card {
+    background: linear-gradient(145deg, #1A1D2A 0%, #0F111A 100%);
+    border: 1px solid rgba(0, 122, 255, 0.2);
+    border-radius: 1rem;
+  }
+  
+  /* Electric Button */
+  .btn-electric {
+    @apply bg-electric text-white font-semibold px-6 py-3 rounded-lg;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-electric:hover {
+    box-shadow: 0 0 30px rgba(0, 122, 255, 0.6);
+    transform: translateY(-2px);
+  }
+  
+  /* Gradient Border */
+  .gradient-border {
+    position: relative;
+    background: #0F111A;
+    border-radius: 1rem;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #007AFF 0%, transparent 50%, #007AFF 100%);
+    border-radius: inherit;
+    z-index: -1;
+  }
+  
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #0F111A;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #007AFF;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3395FF;
+  }
+}
+
+@layer utilities {
+  /* Animation Delays */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+  .animation-delay-700 {
+    animation-delay: 700ms;
+  }
+  .animation-delay-1000 {
+    animation-delay: 1000ms;
+  }
+}

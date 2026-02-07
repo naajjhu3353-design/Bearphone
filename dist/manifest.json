@@ -1,0 +1,102 @@
+{
+  "name": "BEAR PHONE - دب فون",
+  "short_name": "دب فون",
+  "description": "وجهتك الأولى للتقنية الفاخرة - نجيك وين ماتكون",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F111A",
+  "theme_color": "#007AFF",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/bear-logo.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["shopping", "electronics", "business"],
+  "screenshots": [
+    {
+      "src": "/bear-logo.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/bear-logo.png",
+      "sizes": "750x1334",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "المتجر",
+      "short_name": "متجر",
+      "description": "تصفح منتجاتنا",
+      "url": "/store",
+      "icons": [{ "src": "/bear-logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "أنت البائع",
+      "short_name": "بيع",
+      "description": "بيع جهازك",
+      "url": "/sell",
+      "icons": [{ "src": "/bear-logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "صيد الدب",
+      "short_name": "صيد الدب",
+      "description": "خدمة الطوارئ المتنقلة",
+      "url": "/bear-hunt",
+      "icons": [{ "src": "/bear-logo.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
