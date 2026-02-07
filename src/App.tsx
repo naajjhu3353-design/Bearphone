@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+mport { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import './i18n';
@@ -177,8 +177,44 @@ function App() {
     document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
   }, [i18n.language]);
 
+  // Check for URL query parameter to set initial page
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pageParam = params.get('page');
+    
+    if (pageParam) {
+      // Valid pages that can be accessed via URL
+      const validPages = [
+        'home',
+        'store',
+        'phones',
+        'accessories',
+        'services',
+        'bear-hunt',
+        'sell-device',
+        'track-order',
+        'admin'
+      ];
+      
+      if (validPages.includes(pageParam)) {
+        setCurrentPage(pageParam);
+      }
+    }
+  }, []); // Run only once on mount
+
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
+    
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    if (page === 'home') {
+      // Remove query parameter for home page
+      url.searchParams.delete('page');
+    } else {
+      url.searchParams.set('page', page);
+    }
+    window.history.pushState({}, '', url);
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
