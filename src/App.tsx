@@ -79,18 +79,28 @@ function MainContent({ currentPage, onNavigate }: { currentPage: string; onNavig
     switch (currentPage) {
       case 'home':
         return <Hero onNavigate={onNavigate} />;
+      
       case 'store':
-        return <Store />;
+      case 'phones':
+      case 'accessories':
+        // FIX: Added onNavigate prop which is required
+        return <Store onNavigate={onNavigate} />;
+        
       case 'services':
         return <Services />;
+        
       case 'bear-hunt':
         return <Services />;
+        
       case 'sell-device':
         return <SellDevice />;
+        
       case 'track-order':
         return <OrderTracking />;
+        
       case 'admin':
         return <Admin />;
+        
       default:
         return <Hero onNavigate={onNavigate} />;
     }
@@ -123,23 +133,23 @@ function App() {
     document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
   }, [i18n.language]);
 
-  // Handle URL parameters for direct navigation
+  // --- URL Parameter Logic (Admin Access) ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pageParam = params.get('page');
-    // List of allowed pages to prevent errors
-    const validPages = ['home', 'store', 'services', 'sell-device', 'track-order', 'admin'];
+    const validPages = ['home', 'store', 'phones', 'accessories', 'services', 'bear-hunt', 'sell-device', 'track-order', 'admin'];
     
     if (pageParam && validPages.includes(pageParam)) {
       setCurrentPage(pageParam);
     }
   }, []);
+  // ------------------------------------------
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Update URL without reloading
+    // Update URL logic
     const url = new URL(window.location.href);
     if (page === 'home') {
       url.searchParams.delete('page');
