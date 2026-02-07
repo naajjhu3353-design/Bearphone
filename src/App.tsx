@@ -1,4 +1,4 @@
-mport { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import './i18n';
@@ -39,7 +39,6 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
       transition={{ duration: 0.5 }}
       className="fixed inset-0 z-[100] bg-carbon flex flex-col items-center justify-center"
     >
-      {/* Bear Claw Spinner */}
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -47,60 +46,21 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
       >
         <img
           src="/bear-claw.png"
-          alt="Loading"
-          className="w-24 h-24 object-contain"
-          style={{
-            filter: 'drop-shadow(0 0 20px rgba(0, 122, 255, 0.8))',
-          }}
+          alt="Loading..."
+          className="w-24 h-24 object-contain opacity-80"
         />
-        {/* Glow rings */}
-        <motion.div
-          animate={{
-            scale: [1, 1.5, 1],
-            opacity: [0.5, 0, 0.5],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute inset-0 rounded-full border-2 border-electric/50"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 2, 1],
-            opacity: [0.3, 0, 0.3],
-          }}
-          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-          className="absolute inset-0 rounded-full border border-electric/30"
-        />
+        <div className="absolute inset-0 bg-electric-blue/20 blur-xl rounded-full animate-pulse" />
       </motion.div>
 
-      {/* Brand Name */}
-      <motion.h1
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="mt-8 text-3xl font-bold text-white"
+        className="mt-8 text-center"
       >
-        {t('common.brand')}
-      </motion.h1>
-
-      {/* Slogan */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.7 }}
-        className="mt-2 text-electric"
-      >
-        {t('common.slogan')}
-      </motion.p>
-
-      {/* Loading Bar */}
-      <div className="mt-8 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: '100%' }}
-          transition={{ duration: 2, ease: 'easeInOut' }}
-          className="h-full bg-electric rounded-full"
-        />
-      </div>
+        <h2 className="text-2xl font-bold text-white mb-2 tracking-wider">BEAR PHONE</h2>
+        <p className="text-gray-400 text-sm">{t('loading.system')}</p>
+      </motion.div>
     </motion.div>
   );
 }
@@ -110,24 +70,15 @@ function MainContent({ currentPage, onNavigate }: { currentPage: string; onNavig
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 },
+    exit: { opacity: 0, y: -20 }
   };
 
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return (
-          <>
-            <Hero onNavigate={onNavigate} />
-            <Store onNavigate={onNavigate} />
-            <Services />
-            <SellDevice />
-          </>
-        );
+        return <Hero onNavigate={onNavigate} />;
       case 'store':
-      case 'phones':
-      case 'accessories':
-        return <Store onNavigate={onNavigate} />;
+        return <Store />;
       case 'services':
         return <Services />;
       case 'bear-hunt':
@@ -139,14 +90,7 @@ function MainContent({ currentPage, onNavigate }: { currentPage: string; onNavig
       case 'admin':
         return <Admin />;
       default:
-        return (
-          <>
-            <Hero onNavigate={onNavigate} />
-            <Store onNavigate={onNavigate} />
-            <Services />
-            <SellDevice />
-          </>
-        );
+        return <Hero onNavigate={onNavigate} />;
     }
   };
 
@@ -177,45 +121,29 @@ function App() {
     document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
   }, [i18n.language]);
 
-  // Check for URL query parameter to set initial page
+  // --- NEW CODE: Handle URL Parameters ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pageParam = params.get('page');
+    const validPages = ['home', 'store', 'services', 'sell-device', 'track-order', 'admin'];
     
-    if (pageParam) {
-      // Valid pages that can be accessed via URL
-      const validPages = [
-        'home',
-        'store',
-        'phones',
-        'accessories',
-        'services',
-        'bear-hunt',
-        'sell-device',
-        'track-order',
-        'admin'
-      ];
-      
-      if (validPages.includes(pageParam)) {
-        setCurrentPage(pageParam);
-      }
+    if (pageParam && validPages.includes(pageParam)) {
+      setCurrentPage(pageParam);
     }
-  }, []); // Run only once on mount
+  }, []);
+  // ---------------------------------------
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Update URL without page reload
     const url = new URL(window.location.href);
     if (page === 'home') {
-      // Remove query parameter for home page
       url.searchParams.delete('page');
     } else {
       url.searchParams.set('page', page);
     }
     window.history.pushState({}, '', url);
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -249,3 +177,4 @@ function App() {
 }
 
 export default App;
+
