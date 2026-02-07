@@ -39,6 +39,7 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
       transition={{ duration: 0.5 }}
       className="fixed inset-0 z-[100] bg-carbon flex flex-col items-center justify-center"
     >
+      {/* Bear Claw Spinner */}
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -52,6 +53,7 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
         <div className="absolute inset-0 bg-electric-blue/20 blur-xl rounded-full animate-pulse" />
       </motion.div>
 
+      {/* Text Animation */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -121,22 +123,23 @@ function App() {
     document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
   }, [i18n.language]);
 
-  // --- NEW CODE: Handle URL Parameters ---
+  // Handle URL parameters for direct navigation
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pageParam = params.get('page');
+    // List of allowed pages to prevent errors
     const validPages = ['home', 'store', 'services', 'sell-device', 'track-order', 'admin'];
     
     if (pageParam && validPages.includes(pageParam)) {
       setCurrentPage(pageParam);
     }
   }, []);
-  // ---------------------------------------
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
+    // Update URL without reloading
     const url = new URL(window.location.href);
     if (page === 'home') {
       url.searchParams.delete('page');
@@ -177,4 +180,3 @@ function App() {
 }
 
 export default App;
-
