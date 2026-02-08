@@ -1,5 +1,7 @@
+// إعداد Firebase بشكل صحيح
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -7,51 +9,49 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
+
 export const db = getFirestore(app);
-import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+export const auth = getAuth(app);
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { auth } from "../config/firebase";
+import { onAuthStateChanged, User, signOut } from "firebase/auth";
 
 interface AuthContextType {
-  currentUser: any;
-  login: () => void;
-  logout: () => void;
+  currentUser: User | null;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  currentUser: null,
-  login: () => {},
-  logout: () => {},
-});
+const AuthContext = createContext<AuthContextType>({ currentUser: null, logout: async () => {} });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<any>(null);
+export const useAuth = () => useContext(AuthContext);
 
-  const login = () => setCurrentUser({ name: "Admin" });
-  const logout = () => setCurrentUser(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // محاكاة تسجيل دخول تلقائي عند التحميل
-    setCurrentUser({ name: "Admin" });
+    const unsubscribe = onAuthStateChanged(auth, user => setCurrentUser(user));
+    return unsubscribe;
   }, []);
 
+  const logout = async () => {
+    await signOut(auth);
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout }}>
+    <AuthContext.Provider value={{ currentUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
-import { useState, useEffect } from "react";
-import { collection, addDoc, deleteDoc, getDocs, doc } from "firebase/firestore";
+};
+import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { useAuth } from "../contexts/authContext";
-import { Trash2, Loader2, Plus } from "lucide-react";
+import { Trash2, Plus, Loader2, Upload } from "lucide-react";
 
 interface Product {
   id: string;
@@ -61,203 +61,146 @@ interface Product {
 }
 
 export default function Admin() {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", imageUrl: "" });
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", image: "" });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string>("");
 
   const fetchProducts = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const snapshot = await getDocs(collection(db, "products"));
-      const data: Product[] = snapshot.docs.map(docu => ({ id: docu.id, ...docu.data() } as Product));
+      const snap = await getDocs(collection(db, "products"));
+      const data: Product[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as Product) }));
       setProducts(data);
-      setError("");
     } catch (err) {
       console.error(err);
-      setError("Failed to load products.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleImageSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSelectedImage(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+    setPreview(URL.createObjectURL(file));
   };
 
-  const uploadImageToImgbb = async (file: File): Promise<string> => {
-    if (!IMGBB_API_KEY) throw new Error("IMGBB API key missing");
+  const uploadImage = async (file: File) => {
     setUploading(true);
     const formData = new FormData();
     formData.append("image", file);
-
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-    setUploading(false);
-
-    if (!data.success) throw new Error("Image upload failed");
-    return data.data.url;
-  };
-
-  const handleAddProduct = async () => {
-    if (!newProduct.name || !newProduct.price || !selectedImage) {
-      setError("Fill all fields and select image");
-      return;
-    }
-
     try {
-      setSaving(true);
-      setError("");
-      const imageUrl = await uploadImageToImgbb(selectedImage);
-
-      await addDoc(collection(db, "products"), {
-        name: newProduct.name,
-        price: parseFloat(newProduct.price),
-        imageUrl,
-        createdAt: new Date().toISOString(),
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`, {
+        method: "POST",
+        body: formData,
       });
-
-      setSuccess("Product added!");
-      setNewProduct({ name: "", price: "", imageUrl: "" });
-      setSelectedImage(null);
-      setImagePreview("");
-      fetchProducts();
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to add product");
+      const data = await res.json();
+      if (data.success) return data.data.url as string;
+      throw new Error("Upload failed");
     } finally {
-      setSaving(false);
       setUploading(false);
     }
   };
 
-  const handleDeleteProduct = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
+  const handleSave = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newProduct.name || !newProduct.price || !selectedImage) return alert("Fill all fields");
+    setSaving(true);
     try {
-      await deleteDoc(doc(db, "products", id));
-      setSuccess("Product deleted!");
+      const imageUrl = await uploadImage(selectedImage);
+      await addDoc(collection(db, "products"), {
+        name: newProduct.name,
+        price: Number(newProduct.price),
+        imageUrl,
+        createdAt: new Date(),
+      });
+      setNewProduct({ name: "", price: "", image: "" });
+      setSelectedImage(null);
+      setPreview("");
       fetchProducts();
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error(err);
-      setError("Failed to delete product");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (!currentUser)
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="p-6 bg-white rounded-lg shadow-md">
-          <p>Please login to access admin panel.</p>
-        </div>
-      </div>
-    );
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure?")) return;
+    try {
+      await deleteDoc(doc(db, "products", id));
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (!currentUser) return <p className="text-center p-4">Please log in</p>;
 
   return (
     <div className="min-h-screen p-6 bg-gray-100">
-      <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
+      <button onClick={logout} className="mb-4 px-4 py-2 bg-red-500 text-white rounded">Logout</button>
 
-      {error && <div className="p-3 mb-4 bg-red-100 text-red-700 rounded">{error}</div>}
-      {success && <div className="p-3 mb-4 bg-green-100 text-green-700 rounded">{success}</div>}
-
-      {/* Add Product */}
-      <div className="mb-8 bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Plus className="w-5 h-5" /> Add Product
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <input
-            type="text"
-            placeholder="Product Name"
-            value={newProduct.name}
-            onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-            className="p-2 border rounded w-full"
-          />
-          <input
-            type="number"
-            placeholder="Price"
-            value={newProduct.price}
-            onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
-            className="p-2 border rounded w-full"
-          />
-        </div>
-
-        <div className="mb-4">
-          <input type="file" accept="image/*" onChange={handleImageSelect} />
-          {imagePreview && <img src={imagePreview} alt="Preview" className="mt-2 w-32 h-32 object-cover rounded" />}
-        </div>
-
-        <button
-          onClick={handleAddProduct}
-          disabled={saving || uploading}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving ? "Saving..." : "Add Product"}
+      <form onSubmit={handleSave} className="mb-6 p-4 bg-white rounded shadow space-y-4">
+        <input
+          type="text"
+          placeholder="Name"
+          value={newProduct.name}
+          onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+          className="w-full p-2 border rounded"
+        />
+        <input
+          type="number"
+          placeholder="Price"
+          value={newProduct.price}
+          onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+          className="w-full p-2 border rounded"
+        />
+        <input type="file" onChange={handleImageSelect} />
+        {preview && <img src={preview} className="w-32 h-32 object-cover mt-2 rounded" />}
+        <button disabled={saving || uploading} className="px-4 py-2 bg-blue-500 text-white rounded flex items-center gap-2">
+          {saving || uploading ? <Loader2 className="animate-spin w-5 h-5" /> : <Plus className="w-5 h-5" />}
+          Save
         </button>
-      </div>
+      </form>
 
-      {/* Products List */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Products ({products.length})</h2>
-        {loading ? (
-          <Loader2 className="animate-spin w-6 h-6" />
-        ) : products.length === 0 ? (
-          <p>No products yet.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {products.map(p => (
-              <div key={p.id} className="border p-4 rounded shadow hover:shadow-lg transition">
-                <img src={p.imageUrl} alt={p.name} className="w-full h-40 object-cover mb-2 rounded" />
-                <h3 className="font-bold">{p.name}</h3>
-                <p className="text-blue-600 font-semibold">${p.price.toFixed(2)}</p>
-                <button
-                  onClick={() => handleDeleteProduct(p.id)}
-                  className="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                >
-                  Delete <Trash2 className="inline w-4 h-4 ml-1" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {loading ? <p>Loading products...</p> : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {products.map(p => (
+            <div key={p.id} className="p-4 bg-white rounded shadow">
+              <img src={p.imageUrl} className="w-full h-48 object-cover mb-2 rounded" />
+              <h3 className="font-bold">{p.name}</h3>
+              <p className="text-blue-600">${p.price}</p>
+              <button onClick={() => handleDelete(p.id)} className="mt-2 px-3 py-1 bg-red-500 text-white rounded flex items-center gap-1">
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AuthProvider } from "./contexts/authContext";
 import Admin from "./pages/Admin";
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("home");
+  const [currentPage, setCurrentPage] = useState("admin");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000);
+    const timer = setTimeout(() => setIsLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -268,10 +211,8 @@ function App() {
           <motion.div className="min-h-screen flex items-center justify-center">
             Loading...
           </motion.div>
-        ) : currentPage === "admin" ? (
-          <Admin />
         ) : (
-          <div className="min-h-screen p-4">Main App Content Here</div>
+          <Admin />
         )}
       </AnimatePresence>
     </AuthProvider>
