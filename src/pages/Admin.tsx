@@ -430,6 +430,7 @@ const { t, i18n } = useTranslation();
                 />
               </div>
             </div>
+</div>
 {/* --- بداية قسم الذكاء الاصطناعي (تصميم داكن) --- */}
 <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-md">
   <div className="flex items-center gap-2 mb-2">
