@@ -10,11 +10,12 @@ import {
   Plus,
   Edit,
   Trash2,
+  Search,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Package
 } from 'lucide-react';
-import { Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/firebase/config';
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
 interface Product {
   id: string;
