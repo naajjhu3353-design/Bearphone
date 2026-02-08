@@ -48,7 +48,6 @@ export default function Admin() {
     // --- بداية كود الذكاء الاصطناعي ---
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPrompt, setAiPrompt] = useState(""); // اسم المنتج للتوليد
-  const [generatedDesc, setGeneratedDesc] = useState("");
 
   const handleGenerateAI = async () => {
     if (!aiPrompt) return alert("الرجاء كتابة اسم المنتج أو نقاط رئيسية أولاً");
@@ -62,8 +61,7 @@ export default function Admin() {
       });
       
       const data = await res.json();
-      if (data.description) {
-        setGeneratedDesc(data.description);
+      if (data.description)
         // يمكنك هنا أيضاً تحديث خانة الوصف الرئيسية إذا كان لديك state لها
         // مثال: setNewProduct({...newProduct, description// بدلاً من setNewProduct
 if (editingProduct) {
