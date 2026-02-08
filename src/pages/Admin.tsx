@@ -45,12 +45,12 @@ interface MaintenanceRequest {
 }
 
 export default function Admin() {
-    // --- بداية كود الذكاء الاصطناعي ---
+  // --- بداية كود الذكاء الاصطناعي المصحح --- //
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState(""); // اسم المنتج للتوليد
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const handleGenerateAI = async () => {
-    if (!aiPrompt) return alert("الرجاء كتابة اسم المنتج أو نقاط رئيسية أولاً");
+    if (!aiPrompt) return alert("الرجاء كتابة اسم المنتج أولاً");
     
     setAiLoading(true);
     try {
@@ -61,15 +61,12 @@ export default function Admin() {
       });
       
       const data = await res.json();
-      if (data.description)
-        // يمكنك هنا أيضاً تحديث خانة الوصف الرئيسية إذا كان لديك state لها
-        // مثال: setNewProduct({...newProduct, description// بدلاً من setNewProduct
-if (editingProduct) {
-  setEditingProduct({...editingProduct, description: data.description});
-} else {
-  // إذا كان لديك متغير آخر للمنتجات الجديدة، ضعه هنا، أو اكتفِ بنسخ النص يدوياً
-  console.log("تم توليد الوصف:", data.description); 
-}
+      if (data.description) {
+        if (editingProduct) {
+          setEditingProduct({ ...editingProduct, description: data.description });
+        } else {
+          alert("تم توليد الوصف، يمكنك نسخه أو المحاولة عند التعديل");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -78,7 +75,7 @@ if (editingProduct) {
       setAiLoading(false);
     }
   };
-  // --- نهاية كود الذكاء الاصطناعي ---
+  // --- نهاية كود الذكاء الاصطناعي --- //
 const { t, i18n } = useTranslation();
   const { isAdmin, isLoading: authLoading, logout } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
