@@ -45,7 +45,37 @@ interface MaintenanceRequest {
 }
 
 export default function Admin() {
-  const { t, i18n } = useTranslation();
+    // --- بداية كود الذكاء الاصطناعي ---
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState(""); // اسم المنتج للتوليد
+  const [generatedDesc, setGeneratedDesc] = useState("");
+
+  const handleGenerateAI = async () => {
+    if (!aiPrompt) return alert("الرجاء كتابة اسم المنتج أو نقاط رئيسية أولاً");
+    
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/generate', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productName: aiPrompt }),
+      });
+      
+      const data = await res.json();
+      if (data.description) {
+        setGeneratedDesc(data.description);
+        // يمكنك هنا أيضاً تحديث خانة الوصف الرئيسية إذا كان لديك state لها
+        // مثال: setNewProduct({...newProduct, description: data.description})
+      }
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء الاتصال بالذكاء الاصطناعي");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+  // --- نهاية كود الذكاء الاصطناعي ---
+const { t, i18n } = useTranslation();
   const { isAdmin, isLoading: authLoading, logout } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('products');
