@@ -1,42 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Shield, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { useAuth } from '../contexts/authContext'; // ✅ مسار مصحح
-import { db } from '../config/firebase';          // ✅ مسار مصحح
+import { Shield, Trash2, Image as ImageIcon } from 'lucide-react';
+// المسارات المباشرة لضمان العثور على الملفات في Vercel
+import { useAuth } from '../contexts/AuthContext'; 
+import { db } from '../lib/firebase'; 
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
-/* =========================
-   TEMP: IMGBB KEY
-========================= */
-const IMGBB_API_KEY = '718ce8f58f751f5738ac206b786525e5';
-
-/* =========================
-   Component
-========================= */
 export default function Admin() {
   const { logout } = useAuth();
-
   const [products, setProducts] = useState<any[]>([]);
-  const [showDialog, setShowDialog] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
+  
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const [loading, setLoading] = useState({
-    upload: false,
-    save: false,
-  });
-
-  /* =========================
-     Fetch Products
-  ========================= */
   const fetchProducts = async () => {
     try {
-      const snap = await getDocs(collection(db, 'products'));
-      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (err) {
-      console.error(err);
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setProducts(docs);
+    } catch (error) {
+      console.error("Error fetching products:", error);
     }
   };
 
@@ -44,229 +28,98 @@ export default function Admin() {
     fetchProducts();
   }, []);
 
-  /* =========================
-     Upload Image
-  ========================= */
-  const handleUpload = async (e: any) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setPreview(URL.createObjectURL(file));
-    setLoading(prev => ({ ...prev, upload: true }));
-
-    const fd = new FormData();
-    fd.append('image', file);
-
+  const handleSaveProduct = async () => {
+    if (!name || !price || !imageUrl) return alert("الرجاء إكمال البيانات وصورة المنتج");
+    
     try {
-      const res = await fetch(
-        `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
-        {
-          method: 'POST',
-          body: fd,
-        }
-      );
-
-      const data = await res.json();
-      if (data.success) {
-        setImageUrl(data.data.url);
-      } else {
-        throw new Error('Upload failed');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('خطأ أثناء رفع الصورة');
-    } finally {
-      setLoading(prev => ({ ...prev, upload: false }));
-    }
-  };
-
-  /* =========================
-     Save Product
-  ========================= */
-  const handleSave = async () => {
-    if (!name || !price || !imageUrl) {
-      alert('أكمل جميع البيانات');
-      return;
-    }
-
-    setLoading(prev => ({ ...prev, save: true }));
-
-    try {
-      await addDoc(collection(db, 'products'), {
+      await addDoc(collection(db, "products"), {
         name,
         price: Number(price),
         image: imageUrl,
-        createdAt: new Date(),
+        createdAt: new Date()
       });
-
-      setShowDialog(false);
-      setName('');
-      setPrice('');
-      setImageUrl('');
-      setPreview(null);
-
+      
+      setShowProductDialog(false);
       fetchProducts();
-    } catch (err) {
-      console.error(err);
-      alert('خطأ أثناء حفظ المنتج');
-    } finally {
-      setLoading(prev => ({ ...prev, save: false }));
+      setName(""); setPrice(""); setImageUrl("");
+    } catch (error) {
+      alert("خطأ في الحفظ");
     }
   };
 
-  /* =========================
-     UI
-  ========================= */
   return (
-    <div className="min-h-screen bg-[#0F111A] text-white p-6" dir="rtl">
-      <div className="max-w-4xl mx-auto pt-20">
-        {/* Header */}
-        <div className="flex justify-between items-center bg-[#1A1D29] p-5 rounded-2xl mb-8 border border-white/5">
+    <div className="min-h-screen bg-[#0F111A] text-white pt-24 pb-12 px-4" dir="rtl">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8 bg-[#1A1D29] p-6 rounded-2xl border border-white/5">
           <div className="flex items-center gap-3">
-            <Shield className="text-[#007AFF] w-7 h-7" />
-            <h1 className="text-xl font-bold">لوحة تحكم دب فون</h1>
+            <Shield className="text-[#007AFF] w-8 h-8" />
+            <h1 className="text-2xl font-bold">لوحة تحكم دب فون</h1>
           </div>
-          <button
-            onClick={logout}
-            className="text-red-400 font-medium hover:text-red-300"
-          >
-            خروج
-          </button>
+          <button onClick={logout} className="text-red-400 hover:text-red-300">خروج</button>
         </div>
 
-        {/* Add Button */}
-        <button
-          onClick={() => setShowDialog(true)}
-          className="w-full bg-[#007AFF] hover:bg-[#0062CC] py-4 rounded-2xl font-bold mb-10 shadow-lg shadow-[#007AFF]/20 flex items-center justify-center gap-2"
+        <button 
+          onClick={() => setShowProductDialog(true)} 
+          className="bg-[#007AFF] hover:bg-[#007AFF]/80 text-white px-8 py-3 rounded-xl font-bold mb-8 transition-all"
         >
-          <PlusIcon /> إضافة هاتف جديد
+          + إضافة منتج جديد
         </button>
 
-        {/* Products */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {products.map(p => (
-            <div
-              key={p.id}
-              className="bg-[#1A1D29] rounded-3xl border border-white/5 p-4"
-            >
-              <img
-                src={p.image}
-                className="w-full h-52 object-cover rounded-2xl mb-4"
-              />
-              <h3 className="font-bold text-lg">{p.name}</h3>
-              <p className="text-[#007AFF] font-black text-xl mb-4">
-                {p.price} ريال
-              </p>
-              <button
-                onClick={async () => {
-                  if (confirm('حذف المنتج؟')) {
-                    await deleteDoc(doc(db, 'products', p.id));
-                    fetchProducts();
-                  }
-                }}
-                className="bg-red-500/10 p-2 rounded-xl text-red-400 hover:bg-red-500 hover:text-white w-full flex justify-center gap-2"
-              >
-                <Trash2 size={18} /> حذف
-              </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {products.map(product => (
+            <div key={product.id} className="bg-[#1A1D29] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+              <img src={product.image} className="w-full h-48 object-cover" alt="" />
+              <div className="p-4">
+                <h3 className="font-bold text-lg mb-1">{product.name}</h3>
+                <p className="text-[#007AFF] font-bold text-xl mb-4">{product.price} ريال</p>
+                <button 
+                  onClick={() => { if(confirm("هل أنت متأكد؟")) deleteDoc(doc(db, "products", product.id)).then(fetchProducts); }} 
+                  className="text-red-400 w-full bg-red-500/10 py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" /> حذف المنتج
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Dialog */}
-      {showDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-          <div className="bg-[#1A1D29] w-full max-w-md rounded-3xl p-8 border border-white/10">
-            <h2 className="text-2xl font-bold mb-6 text-center">
-              إضافة منتج جديد
-            </h2>
-
-            <div className="space-y-5">
-              <div
-                onClick={() =>
-                  document.getElementById('imgInp')?.click()
-                }
-                className="border-2 border-dashed border-white/10 rounded-2xl h-48 flex items-center justify-center cursor-pointer relative overflow-hidden"
-              >
-                {preview ? (
-                  <>
-                    <img
-                      src={preview}
-                      className="w-full h-full object-cover"
-                    />
-                    {loading.upload && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <Loader2 className="animate-spin text-[#007AFF]" />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <ImageIcon className="opacity-20 w-12 h-12" />
-                )}
+      {showProductDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#1A1D29] w-full max-w-md rounded-2xl p-6 border border-white/10">
+            <h2 className="text-xl font-bold mb-6 text-center text-white font-sans">إضافة هاتف جديد</h2>
+            <div className="space-y-4">
+              <input 
+                placeholder="اسم الهاتف" 
+                value={name} 
+                onChange={(e)=>setName(e.target.value)} 
+                className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none focus:border-[#007AFF]" 
+              />
+              <input 
+                type="number" 
+                placeholder="السعر" 
+                value={price} 
+                onChange={(e)=>setPrice(e.target.value)} 
+                className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none" 
+              />
+              <div className="space-y-2">
+                <label className="text-xs text-white/50 px-1">رابط صورة المنتج (URL)</label>
+                <input 
+                  placeholder="https://..." 
+                  value={imageUrl} 
+                  onChange={(e)=>setImageUrl(e.target.value)} 
+                  className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none" 
+                />
               </div>
-
-              <input
-                id="imgInp"
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleUpload}
-              />
-
-              <input
-                placeholder="اسم الهاتف"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full bg-[#0F111A] p-4 rounded-2xl border border-white/10"
-              />
-
-              <input
-                type="number"
-                placeholder="السعر"
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-                className="w-full bg-[#0F111A] p-4 rounded-2xl border border-white/10"
-              />
-
-              <button
-                onClick={handleSave}
-                disabled={loading.upload || loading.save}
-                className="w-full bg-[#007AFF] py-4 rounded-2xl font-bold disabled:opacity-50"
-              >
-                {loading.save ? 'جاري الحفظ...' : 'نشر المنتج'}
-              </button>
-
-              <button
-                onClick={() => setShowDialog(false)}
-                className="w-full text-white/40 text-sm"
-              >
-                إلغاء
-              </button>
+              
+              <div className="flex gap-2 pt-4">
+                <button onClick={handleSaveProduct} className="flex-1 bg-[#007AFF] text-white py-3 rounded-lg font-bold">حفظ ونشر</button>
+                <button onClick={() => setShowProductDialog(false)} className="px-4 bg-white/5 text-white/60 py-3 rounded-lg">إلغاء</button>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-/* =========================
-   Plus Icon
-========================= */
-function PlusIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
   );
 }
