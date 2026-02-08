@@ -15,7 +15,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 // --- "718ce8f58f751f5738ac206b786525e5";---
-const IMGBB_API_KEY = "ضـع_مفتاح_API_الخاص_بك_هنا"; 
+const IMGBB_API_KEY = "718ce8f58f751f5738ac206b786525e5"; 
 
 interface Product {
   id: string;
