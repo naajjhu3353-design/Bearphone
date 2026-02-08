@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Shield, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { db } from '../config/firebase';
+import { useAuth } from '../contexts/authContext'; // ✅ مسار مصحح
+import { db } from '../config/firebase';          // ✅ مسار مصحح
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 /* =========================
    TEMP: IMGBB KEY
-   (سيعمل على Vercel)
 ========================= */
 const IMGBB_API_KEY = '718ce8f58f751f5738ac206b786525e5';
 
