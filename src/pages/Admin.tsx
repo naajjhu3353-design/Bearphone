@@ -424,6 +424,40 @@ const { t, i18n } = useTranslation();
                 />
               </div>
             </div>
+{/* --- بداية قسم الذكاء الاصطناعي (تصميم داكن) --- */}
+<div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-md">
+  <div className="flex items-center gap-2 mb-2">
+    <span className="text-lg">🤖</span>
+    <Label className="text-electric font-bold">مساعد الكتابة الذكي</Label>
+  </div>
+  
+  <div className="flex gap-2">
+    <Input
+      placeholder="اكتب اسم المنتج... (مثال: شاحن سريع)"
+      value={aiPrompt}
+      onChange={(e) => setAiPrompt(e.target.value)}
+      className="bg-carbon-light border-white/10 text-white placeholder:text-gray-500 focus:border-electric"
+    />
+    
+    <Button
+      type="button" 
+      onClick={handleGenerateAI}
+      disabled={aiLoading}
+      className="bg-electric hover:bg-electric/80 text-white min-w-[100px]"
+    >
+      {aiLoading ? "جاري..." : "توليد"}
+    </Button>
+  </div>
+  
+  <p className="text-xs text-gray-400 mt-2">
+    سيقوم بتعبئة خانة الوصف بالأسفل تلقائياً.
+  </p>
+</div>
+{/* --- نهاية قسم الذكاء الاصطناعي --- */}
+
+{/* هنا يبدأ السطر 427 القديم الخاص بالوصف */}
+<div className="...">
+
             <div>
               <Label className="text-white/80">{t('admin.productForm.description')}</Label>
               <Input
