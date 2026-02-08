@@ -4,82 +4,48 @@ import { motion } from 'framer-motion';
 import {
   Shield,
   LogOut,
-  Wrench,
-  ShoppingCart,
-  TrendingUp,
   Plus,
-  Edit,
-  Trash2,
-  Search,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Package
+  Trash2
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/firebase/config';
-import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
-/* ===================== Types ===================== */
+/* ================= Types ================= */
 
 interface Product {
   id: string;
   name: string;
   price: number;
-  category: 'phone' | 'accessory';
-  condition: 'new' | 'used';
   stock: number;
   description: string;
   image?: string;
 }
 
-interface MaintenanceRequest {
-  id: string;
-  customerName: string;
-  phone: string;
-  deviceType: string;
-  issue: string;
-  status: 'pending' | 'inProgress' | 'ready';
-  createdAt: Date;
-}
-
-/* ===================== Component ===================== */
+/* ================= Component ================= */
 
 export default function Admin() {
-  const { t, i18n } = useTranslation();
-  const { isAdmin, isLoading: authLoading, logout } = useAuth();
+  const { t } = useTranslation();
+  const { isAdmin, logout } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'products' | 'maintenance'>('products');
   const [products, setProducts] = useState<Product[]>([]);
-  const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
   const [showProductDialog, setShowProductDialog] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
-  const isRTL = i18n.language === 'ar';
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [stock, setStock] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
 
-  /* ===================== Data ===================== */
+  /* ================= Data ================= */
 
-  useEffect(() => {
-    loadProducts();
-    loadMaintenanceRequests();
-  }, []);
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      setShowLoginDialog(true);
-    }
-  }, [authLoading, isAdmin]);
-
-  const loadProducts = async () => {
+  const fetchProducts = async () => {
     const snapshot = await getDocs(collection(db, 'products'));
     const data = snapshot.docs.map(
       (d) => ({ id: d.id, ...d.data() } as Product)
@@ -87,155 +53,192 @@ export default function Admin() {
     setProducts(data);
   };
 
-  const loadMaintenanceRequests = async () => {
-    const snapshot = await getDocs(collection(db, 'maintenanceRequests'));
-    const data = snapshot.docs.map(
-      (d) =>
-        ({
-          id: d.id,
-          ...d.data(),
-          createdAt: d.data().createdAt?.toDate?.() ?? new Date()
-        } as MaintenanceRequest)
-    );
-    setMaintenanceRequests(data);
+  useEffect(() => {
+    if (isAdmin) fetchProducts();
+  }, [isAdmin]);
+
+  /* ================= Actions ================= */
+
+  const handleSaveProduct = async () => {
+    if (!name || !price) {
+      alert('الرجاء إكمال البيانات الأساسية');
+      return;
+    }
+
+    await addDoc(collection(db, 'products'), {
+      name,
+      price: Number(price),
+      stock: Number(stock),
+      description,
+      image:
+        imageUrl ||
+        'https://placehold.co/400x400/0f111a/007aff?text=No+Image',
+      createdAt: new Date()
+    });
+
+    setShowProductDialog(false);
+    fetchProducts();
+
+    setName('');
+    setPrice('');
+    setStock('');
+    setDescription('');
+    setImageUrl('');
   };
 
-  /* ===================== Actions ===================== */
-
-  const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Delete product?')) return;
-    await deleteDoc(doc(db, 'products', id));
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const handleDelete = async (id: string) => {
+    if (window.confirm(t('common.confirmDelete') || 'هل أنت متأكد؟')) {
+      await deleteDoc(doc(db, 'products', id));
+      fetchProducts();
+    }
   };
 
-  const handleUpdateStatus = async (
-    id: string,
-    status: MaintenanceRequest['status']
-  ) => {
-    await updateDoc(doc(db, 'maintenanceRequests', id), { status });
-    setMaintenanceRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
-  };
-
-  const getStatusBadge = (status: MaintenanceRequest['status']) => {
-    const config = {
-      pending: { icon: Clock, class: 'bg-amber-500' },
-      inProgress: { icon: AlertCircle, class: 'bg-blue-500' },
-      ready: { icon: CheckCircle2, class: 'bg-green-500' }
-    }[status];
-
-    return (
-      <Badge className={`${config.class} text-white`}>
-        <config.icon className="w-3 h-3 mr-1" />
-        {t(`orderTracking.stages.${status}`)}
-      </Badge>
-    );
-  };
-
-  /* ===================== Loading ===================== */
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-carbon">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-        >
-          <Shield className="w-12 h-12 text-electric" />
-        </motion.div>
-      </div>
-    );
-  }
-
-  /* ===================== UI ===================== */
+  /* ================= UI ================= */
 
   return (
-    <div className="min-h-screen bg-carbon pt-20 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-carbon pt-24 pb-12 px-4">
+      <div className="max-w-6xl mx-auto">
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Shield className="text-electric" />
             {t('admin.title')}
           </h1>
-          <Button onClick={logout} variant="outline">
+
+          <Button
+            variant="outline"
+            onClick={logout}
+            className="text-red-400 border-red-500/30"
+          >
             <LogOut className="w-4 h-4 mr-2" />
             {t('nav.logout')}
           </Button>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList>
-            <TabsTrigger value="products">
-              <Package className="w-4 h-4 mr-2" />
-              {t('admin.products')}
-            </TabsTrigger>
-            <TabsTrigger value="maintenance">
-              <Wrench className="w-4 h-4 mr-2" />
-              {t('admin.maintenance')}
-            </TabsTrigger>
-          </TabsList>
+        {/* Products */}
+        <div className="carbon-card p-6 bg-white/5 rounded-2xl border border-white/10">
+          <Button
+            onClick={() => setShowProductDialog(true)}
+            className="bg-electric mb-8"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {t('admin.addProduct')}
+          </Button>
 
-          {/* Products */}
-          <TabsContent value="products">
-            <table className="w-full mt-6">
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.id} className="border-b border-white/10">
-                    <td className="text-white">{p.name}</td>
-                    <td className="text-electric">{p.price} SAR</td>
-                    <td>
-                      <Button size="icon" onClick={() => handleDeleteProduct(p.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TabsContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map((product) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden"
+              >
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-48 object-cover"
+                />
 
-          {/* Maintenance */}
-          <TabsContent value="maintenance">
-            <table className="w-full mt-6">
-              <tbody>
-                {maintenanceRequests.map((r) => (
-                  <tr key={r.id} className="border-b border-white/10">
-                    <td className="text-white">{r.customerName}</td>
-                    <td>{getStatusBadge(r.status)}</td>
-                    <td>
-                      <select
-                        value={r.status}
-                        onChange={(e) =>
-                          handleUpdateStatus(
-                            r.id,
-                            e.target.value as MaintenanceRequest['status']
-                          )
-                        }
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="inProgress">In Progress</option>
-                        <option value="ready">Ready</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TabsContent>
-        </Tabs>
+                <div className="p-4">
+                  <h3 className="text-white font-bold text-lg">
+                    {product.name}
+                  </h3>
+                  <p className="text-electric font-bold">
+                    {product.price} SAR
+                  </p>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleDelete(product.id)}
+                    className="text-red-400 mt-4 w-full bg-red-500/5 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {t('common.actions')}
+                  </Button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Login Dialog */}
-      <Dialog open={showLoginDialog}>
-        <DialogContent>
+      {/* Dialog */}
+      <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
+        <DialogContent className="bg-carbon border-white/10 max-w-md">
           <DialogHeader>
-            <DialogTitle>Admin Login</DialogTitle>
+            <DialogTitle className="text-white">
+              {t('admin.addProduct')}
+            </DialogTitle>
           </DialogHeader>
-          <Button onClick={() => setShowLoginDialog(false)}>
-            Close
-          </Button>
+
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label className="text-white/70">
+                {t('admin.productForm.name')}
+              </Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-white/5 border-white/10 text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-white/70">
+                  {t('common.price')}
+                </Label>
+                <Input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-white/70">
+                  {t('admin.productForm.stock')}
+                </Label>
+                <Input
+                  type="number"
+                  value={stock}
+                  onChange={(e) => setStock(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-white/70">
+                رابط صورة المنتج (URL)
+              </Label>
+              <Input
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="bg-white/5 border-white/10 text-white"
+              />
+            </div>
+
+            <div>
+              <Label className="text-white/70">
+                {t('admin.productForm.description')}
+              </Label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-md p-2 text-white h-24"
+              />
+            </div>
+
+            <Button
+              onClick={handleSaveProduct}
+              className="w-full bg-electric"
+            >
+              {t('common.save')}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
