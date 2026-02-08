@@ -1,32 +1,32 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
-import './i18n';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
+import "./i18n";
 
 // Layout Components
-import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
+import Header from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
 
 // Common Components
-import WhatsAppButton from './components/common/WhatsAppButton';
+import WhatsAppButton from "./components/common/WhatsAppButton";
 
 // Sections
-import Hero from './sections/Hero';
-import Store from './sections/Store';
-import Services from './sections/Services';
-import SellDevice from './sections/SellDevice';
-import OrderTracking from './sections/OrderTracking';
+import Hero from "./sections/Hero";
+import Store from "./sections/Store";
+import Services from "./sections/Services";
+import SellDevice from "./sections/SellDevice";
+import OrderTracking from "./sections/OrderTracking";
 
 // Pages
-import Admin from './pages/Admin';
+import Admin from "./pages/Admin";
 
 // Context
-import { AuthProvider } from './contexts/authContext';
+import { AuthProvider } from "./contexts/authContext";
 
-// Loading Screen Component
+// Loading Screen
 function LoadingScreen({ onComplete }: { onComplete: () => void }) {
   const { t } = useTranslation();
-  
+
   useEffect(() => {
     const timer = setTimeout(onComplete, 2500);
     return () => clearTimeout(timer);
@@ -42,7 +42,7 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
       {/* Bear Claw Spinner */}
       <motion.div
         animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
         className="relative"
       >
         <img
@@ -53,53 +53,53 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
         <div className="absolute inset-0 bg-electric-blue/20 blur-xl rounded-full animate-pulse" />
       </motion.div>
 
-      {/* Text Animation */}
+      {/* Text */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
         className="mt-8 text-center"
       >
-        <h2 className="text-2xl font-bold text-white mb-2 tracking-wider">BEAR PHONE</h2>
-        <p className="text-gray-400 text-sm">{t('loading.system')}</p>
+        <h2 className="text-2xl font-bold text-white mb-2 tracking-wider">
+          BEAR PHONE
+        </h2>
+        <p className="text-gray-400 text-sm">{t("loading.system")}</p>
       </motion.div>
     </motion.div>
   );
 }
 
-// Main Content Component
-function MainContent({ currentPage, onNavigate }: { currentPage: string; onNavigate: (page: string) => void }) {
+// Main Content
+function MainContent({
+  currentPage,
+  onNavigate,
+}: {
+  currentPage: string;
+  onNavigate: (page: string) => void;
+}) {
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 }
+    exit: { opacity: 0, y: -20 },
   };
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'home':
+      case "home":
         return <Hero onNavigate={onNavigate} />;
-      
-      case 'store':
-      case 'phones':
-      case 'accessories':
+      case "store":
+      case "phones":
+      case "accessories":
         return <Store onNavigate={onNavigate} />;
-        
-      case 'services':
+      case "services":
+      case "bear-hunt":
         return <Services />;
-        
-      case 'bear-hunt':
-        return <Services />;
-        
-      case 'sell-device':
+      case "sell-device":
         return <SellDevice />;
-        
-      case 'track-order':
+      case "track-order":
         return <OrderTracking />;
-        
-      case 'admin':
+      case "admin":
         return <Admin />;
-        
       default:
         return <Hero onNavigate={onNavigate} />;
     }
@@ -124,20 +124,29 @@ function MainContent({ currentPage, onNavigate }: { currentPage: string; onNavig
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState("home");
   const { i18n } = useTranslation();
 
   // Set initial direction
   useEffect(() => {
-    document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
+    document.dir = i18n.language === "ar" ? "rtl" : "ltr";
   }, [i18n.language]);
 
   // URL Parameter Logic (Admin Access)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const pageParam = params.get('page');
-    const validPages = ['home', 'store', 'phones', 'accessories', 'services', 'bear-hunt', 'sell-device', 'track-order', 'admin'];
-    
+    const pageParam = params.get("page");
+    const validPages = [
+      "home",
+      "store",
+      "phones",
+      "accessories",
+      "services",
+      "bear-hunt",
+      "sell-device",
+      "track-order",
+      "admin",
+    ];
     if (pageParam && validPages.includes(pageParam)) {
       setCurrentPage(pageParam);
     }
@@ -145,36 +154,31 @@ function App() {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     // Update URL
     const url = new URL(window.location.href);
-    if (page === 'home') {
-      url.searchParams.delete('page');
-    } else {
-      url.searchParams.set('page', page);
-    }
-    window.history.pushState({}, '', url);
+    if (page === "home") url.searchParams.delete("page");
+    else url.searchParams.set("page", page);
+    window.history.pushState({}, "", url);
   };
 
   return (
     <AuthProvider>
       <div className="min-h-screen bg-carbon">
         <AnimatePresence>
-          {isLoading && (
-            <LoadingScreen onComplete={() => setIsLoading(false)} />
-          )}
+          {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
         </AnimatePresence>
 
         {!isLoading && (
           <>
-            {currentPage !== 'admin' && (
+            {currentPage !== "admin" && (
               <Header onNavigate={handleNavigate} currentPage={currentPage} />
             )}
-            
+
             <MainContent currentPage={currentPage} onNavigate={handleNavigate} />
-            
-            {currentPage !== 'admin' && (
+
+            {currentPage !== "admin" && (
               <>
                 <Footer onNavigate={handleNavigate} />
                 <WhatsAppButton />
