@@ -65,7 +65,13 @@ export default function Admin() {
       if (data.description) {
         setGeneratedDesc(data.description);
         // يمكنك هنا أيضاً تحديث خانة الوصف الرئيسية إذا كان لديك state لها
-        // مثال: setNewProduct({...newProduct, description: data.description})
+        // مثال: setNewProduct({...newProduct, description// بدلاً من setNewProduct
+if (editingProduct) {
+  setEditingProduct({...editingProduct, description: data.description});
+} else {
+  // إذا كان لديك متغير آخر للمنتجات الجديدة، ضعه هنا، أو اكتفِ بنسخ النص يدوياً
+  console.log("تم توليد الوصف:", data.description); 
+}
       }
     } catch (err) {
       console.error(err);
