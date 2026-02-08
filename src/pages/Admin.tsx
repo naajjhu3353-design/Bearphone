@@ -6,50 +6,10 @@ import { db } from '../lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 export default function Admin() {
-  const { logout } = useAuth();
-  const [products, setProducts] = useState<any[]>([]);
-  const [showDialog, setShowDialog] = useState(false);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-
-  const fetchProducts = async () => {
-    try {
-      const snap = await getDocs(collection(db, "products"));
-      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) { console.error(e); }
-  };
-
-  useEffect(() => { fetchProducts(); }, []);
-
-  const handleSave = async () => {
-    if (!name || !price || !imageUrl) return alert("الرجاء إكمال البيانات والرابط");
-    try {
-      await addDoc(collection(db, "products"), { 
-        name, 
-        price: Number(price), 
-        image: imageUrl, 
-        createdAt: new Date() 
-      });
-      setShowDialog(false);
-      fetchProducts();
-      setName(""); setPrice(""); setImageUrl("");
-    } catch (e) { alert("خطأ في الحفظ"); }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#0F111A] text-white p-6" dir="rtl">
-      <div className="max-w-4xl mx-auto pt-20">
-        <div className="flex justify-between items-center bg-[#1A1D29] p-4 rounded-xl mb-6 border border-white/5 shadow-lg">
-          <div className="flex items-center gap-2">
-            <Shield className="text-[#007AFF]" />
-            <h1 className="font-bold">لوحة تحكم دب فون</h1>
-          </div>
-          <button onClick={logout} className="text-red-400 text-sm hover:underline">خروج</button>
-        </div>
-
-        <button 
-          onClick={() => setShowDialog(true)} 
+  import { useAuth } from '../contexts/AuthContext'; 
+import { db } from '../lib/firebase'; 
+import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
+ 
           className="w-full bg-[#007AFF] hover:bg-[#0062CC] py-4 rounded-xl font-bold mb-8 shadow-lg shadow-[#007AFF]/20 transition-all"
         >
           + إضافة هاتف جديد
