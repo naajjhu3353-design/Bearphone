@@ -1,12 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import {
-  Shield,
-  LogOut,
-  Plus,
-  Trash2
-} from 'lucide-react';
+import { Shield, LogOut, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,8 +12,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
-/* ================= Types ================= */
-
 interface Product {
   id: string;
   name: string;
@@ -27,8 +20,6 @@ interface Product {
   description: string;
   image?: string;
 }
-
-/* ================= Component ================= */
 
 export default function Admin() {
   const { t } = useTranslation();
@@ -43,21 +34,21 @@ export default function Admin() {
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
 
-  /* ================= Data ================= */
-
   const fetchProducts = async () => {
-    const snapshot = await getDocs(collection(db, 'products'));
-    const data = snapshot.docs.map(
-      (d) => ({ id: d.id, ...d.data() } as Product)
-    );
-    setProducts(data);
+    try {
+      const snap = await getDocs(collection(db, 'products'));
+      const docs = snap.docs.map(
+        d => ({ id: d.id, ...d.data() } as Product)
+      );
+      setProducts(docs);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+    }
   };
 
   useEffect(() => {
     if (isAdmin) fetchProducts();
   }, [isAdmin]);
-
-  /* ================= Actions ================= */
 
   const handleSaveProduct = async () => {
     if (!name || !price) {
@@ -65,25 +56,29 @@ export default function Admin() {
       return;
     }
 
-    await addDoc(collection(db, 'products'), {
-      name,
-      price: Number(price),
-      stock: Number(stock),
-      description,
-      image:
-        imageUrl ||
-        'https://placehold.co/400x400/0f111a/007aff?text=No+Image',
-      createdAt: new Date()
-    });
+    try {
+      await addDoc(collection(db, 'products'), {
+        name,
+        price: Number(price),
+        stock: Number(stock),
+        description,
+        image:
+          imageUrl ||
+          'https://placehold.co/400x400/0f111a/007aff?text=No+Image',
+        createdAt: new Date()
+      });
 
-    setShowProductDialog(false);
-    fetchProducts();
+      setShowProductDialog(false);
+      fetchProducts();
 
-    setName('');
-    setPrice('');
-    setStock('');
-    setDescription('');
-    setImageUrl('');
+      setName('');
+      setPrice('');
+      setStock('');
+      setDescription('');
+      setImageUrl('');
+    } catch {
+      alert('خطأ في الحفظ');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -93,13 +88,9 @@ export default function Admin() {
     }
   };
 
-  /* ================= UI ================= */
-
   return (
     <div className="min-h-screen bg-carbon pt-24 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
-
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Shield className="text-electric" />
@@ -116,7 +107,6 @@ export default function Admin() {
           </Button>
         </div>
 
-        {/* Products */}
         <div className="carbon-card p-6 bg-white/5 rounded-2xl border border-white/10">
           <Button
             onClick={() => setShowProductDialog(true)}
@@ -127,7 +117,7 @@ export default function Admin() {
           </Button>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => (
+            {products.map(product => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0 }}
@@ -163,7 +153,6 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Dialog */}
       <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
         <DialogContent className="bg-carbon border-white/10 max-w-md">
           <DialogHeader>
@@ -179,7 +168,7 @@ export default function Admin() {
               </Label>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={e => setName(e.target.value)}
                 className="bg-white/5 border-white/10 text-white"
               />
             </div>
@@ -192,7 +181,7 @@ export default function Admin() {
                 <Input
                   type="number"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={e => setPrice(e.target.value)}
                   className="bg-white/5 border-white/10 text-white"
                 />
               </div>
@@ -204,7 +193,7 @@ export default function Admin() {
                 <Input
                   type="number"
                   value={stock}
-                  onChange={(e) => setStock(e.target.value)}
+                  onChange={e => setStock(e.target.value)}
                   className="bg-white/5 border-white/10 text-white"
                 />
               </div>
@@ -216,7 +205,8 @@ export default function Admin() {
               </Label>
               <Input
                 value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
+                onChange={e => setImageUrl(e.target.value)}
+                placeholder="https://example.com/image.jpg"
                 className="bg-white/5 border-white/10 text-white"
               />
             </div>
@@ -227,14 +217,14 @@ export default function Admin() {
               </Label>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={e => setDescription(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-md p-2 text-white h-24"
               />
             </div>
 
             <Button
               onClick={handleSaveProduct}
-              className="w-full bg-electric"
+              className="w-full bg-electric text-white"
             >
               {t('common.save')}
             </Button>
