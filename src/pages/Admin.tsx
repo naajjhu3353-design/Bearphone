@@ -1,20 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
-import { 
-  Shield, LogOut, Package, Plus, Edit, Trash2, Image as ImageIcon, Loader2
-} from 'lucide-react';
+import { Shield, Plus, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
-
-// استيراد قاعدة البيانات من ملفك الأصلي
 import { db } from '@/lib/firebase'; 
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
-// --- "718ce8f58f751f5738ac206b786525e5";---
+// تم وضع المفتاح الخاص بك بشكل صحيح هنا
 const IMGBB_API_KEY = "718ce8f58f751f5738ac206b786525e5"; 
 
 interface Product {
@@ -27,12 +21,10 @@ interface Product {
 }
 
 export default function Admin() {
-  const { t } = useTranslation();
-  const { isAdmin, logout } = useAuth();
+  const { logout } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [showProductDialog, setShowProductDialog] = useState(false);
   
-  // حقول النموذج
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
@@ -43,18 +35,20 @@ export default function Admin() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // جلب المنتجات من Firestore عند فتح الصفحة
   const fetchProducts = async () => {
-    const querySnapshot = await getDocs(collection(db, "products"));
-    const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-    setProducts(docs);
+    try {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setProducts(docs);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  // دالة رفع الصورة لـ ImgBB
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -72,9 +66,9 @@ export default function Admin() {
       });
       const data = await response.json();
       if (data.success) {
-        setImageUrl(data.data.url); // هذا هو الرابط الذي سنخزنه
+        setImageUrl(data.data.url);
       } else {
-        alert("فشل رفع الصورة، تأكد من المفتاح");
+        alert("فشل رفع الصورة");
       }
     } catch (error) {
       alert("خطأ في الاتصال بسيرفر الصور");
@@ -83,7 +77,6 @@ export default function Admin() {
     }
   };
 
-  // دالة حفظ المنتج في Firebase
   const handleSaveProduct = async () => {
     if (!name || !price || !imageUrl) return alert("الرجاء إكمال البيانات وصورة المنتج");
     
@@ -98,21 +91,18 @@ export default function Admin() {
         createdAt: new Date()
       });
       
-      alert("تمت إضافة المنتج بنجاح! 🎉");
       setShowProductDialog(false);
-      fetchProducts(); // تحديث القائمة
-      // تصفير الحقول
-      setName(""); setPrice(""); setImageUrl(""); setImagePreview(null);
+      fetchProducts();
+      setName(""); setPrice(""); setStock(""); setDescription(""); setImageUrl(""); setImagePreview(null);
     } catch (error) {
-      console.error(error);
-      alert("خطأ في حفظ البيانات في Firebase");
+      alert("خطأ في حفظ البيانات");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+    if (window.confirm("هل أنت متأكد من الحذف؟")) {
       await deleteDoc(doc(db, "products", id));
       fetchProducts();
     }
@@ -129,8 +119,8 @@ export default function Admin() {
         </div>
 
         <div className="carbon-card p-6">
-          <Button onClick={() => setShowProductDialog(true)} className="bg-electric mb-8 w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" /> إضافة هاتف أو إكسسوار جديد
+          <Button onClick={() => setShowProductDialog(true)} className="bg-electric mb-8 w-full sm:w-auto text-white hover:bg-electric/80">
+            <Plus className="w-4 h-4 mr-2" /> إضافة منتج جديد
           </Button>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -152,50 +142,39 @@ export default function Admin() {
 
       <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
         <DialogContent className="bg-carbon border-white/10 max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-white">تفاصيل المنتج الجديد</DialogTitle></DialogHeader>
-          
+          <DialogHeader><DialogTitle className="text-white">إضافة هاتف جديد</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {/* رفع الصورة */}
             <div className="space-y-4">
-              <Label className="text-white/70">صورة المنتج</Label>
+              <Label className="text-white/70 text-right block w-full">صورة المنتج</Label>
               <div 
                 onClick={() => document.getElementById('imgInput')?.click()}
-                className="border-2 border-dashed border-white/10 rounded-xl h-64 flex flex-col items-center justify-center cursor-pointer bg-white/5 overflow-hidden group hover:border-electric/50 transition-all"
+                className="border-2 border-dashed border-white/10 rounded-xl h-64 flex flex-col items-center justify-center cursor-pointer bg-white/5 overflow-hidden"
               >
                 {imagePreview ? (
                   <div className="relative w-full h-full">
-                    <img src={imagePreview} className="w-full h-full object-cover" />
-                    {uploading && (
-                      <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
-                        <Loader2 className="animate-spin text-electric mb-2" />
-                        <span className="text-white text-xs">جاري الرفع...</span>
-                      </div>
-                    )}
+                    <img src={imagePreview} className="w-full h-full object-cover" alt="" />
+                    {uploading && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 className="animate-spin text-electric" /></div>}
                   </div>
                 ) : (
-                  <>
-                    <ImageIcon className="w-12 h-12 text-white/20 group-hover:text-electric/50" />
-                    <span className="text-white/40 text-sm mt-2">اضغط لاختيار صورة</span>
-                  </>
+                  <ImageIcon className="w-12 h-12 text-white/20" />
                 )}
               </div>
               <input type="file" id="imgInput" hidden accept="image/*" onChange={handleImageUpload} />
             </div>
 
-            {/* البيانات */}
             <div className="space-y-4">
-              <Input placeholder="اسم الهاتف (مثلاً: iPhone 16 Pro)" value={name} onChange={(e)=>setName(e.target.value)} className="bg-white/5 border-white/10 text-white" />
+              <Input placeholder="اسم الهاتف" value={name} onChange={(e)=>setName(e.target.value)} className="bg-white/5 border-white/10 text-white" />
               <div className="grid grid-cols-2 gap-4">
                 <Input type="number" placeholder="السعر" value={price} onChange={(e)=>setPrice(e.target.value)} className="bg-white/5 border-white/10 text-white" />
                 <Input type="number" placeholder="الكمية" value={stock} onChange={(e)=>setStock(e.target.value)} className="bg-white/5 border-white/10 text-white" />
               </div>
               <textarea 
-                placeholder="وصف مختصر للمنتج..." 
+                placeholder="الوصف..." 
                 value={description}
                 onChange={(e)=>setDescription(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-md p-2 text-white h-32 focus:border-electric outline-none" 
               />
-              <Button onClick={handleSaveProduct} disabled={uploading || saving} className="w-full bg-electric py-6">
+              <Button onClick={handleSaveProduct} disabled={uploading || saving} className="w-full bg-electric text-white py-6">
                 {saving ? "جاري الحفظ..." : "حفظ ونشر المنتج"}
               </Button>
             </div>
