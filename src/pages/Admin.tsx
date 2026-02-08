@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Shield, Trash2, Image as ImageIcon } from 'lucide-react';
-// المسارات المباشرة لضمان نجاح البناء في Vercel
+import { Shield, Trash2 } from 'lucide-react';
+// استخدام مسارات مباشرة للتأكد من أن Vercel يجد الملفات
 import { useAuth } from '../contexts/AuthContext'; 
 import { db } from '../lib/firebase'; 
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -23,9 +23,14 @@ export default function Admin() {
   useEffect(() => { fetchProducts(); }, []);
 
   const handleSave = async () => {
-    if (!name || !price || !imageUrl) return alert("أكمل البيانات والصورة");
+    if (!name || !price || !imageUrl) return alert("الرجاء إكمال البيانات والرابط");
     try {
-      await addDoc(collection(db, "products"), { name, price: Number(price), image: imageUrl, createdAt: new Date() });
+      await addDoc(collection(db, "products"), { 
+        name, 
+        price: Number(price), 
+        image: imageUrl, 
+        createdAt: new Date() 
+      });
       setShowDialog(false);
       fetchProducts();
       setName(""); setPrice(""); setImageUrl("");
@@ -35,33 +40,49 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-[#0F111A] text-white p-6" dir="rtl">
       <div className="max-w-4xl mx-auto pt-20">
-        <div className="flex justify-between items-center bg-[#1A1D29] p-4 rounded-xl mb-8 border border-white/5">
-          <div className="flex items-center gap-2"><Shield className="text-[#007AFF]" /><h1 className="font-bold">لوحة تحكم دب فون</h1></div>
-          <button onClick={logout} className="text-red-400 text-sm">خروج</button>
+        <div className="flex justify-between items-center bg-[#1A1D29] p-4 rounded-xl mb-6 border border-white/5 shadow-lg">
+          <div className="flex items-center gap-2">
+            <Shield className="text-[#007AFF]" />
+            <h1 className="font-bold">لوحة تحكم دب فون</h1>
+          </div>
+          <button onClick={logout} className="text-red-400 text-sm hover:underline">خروج</button>
         </div>
-        <button onClick={() => setShowDialog(true)} className="w-full bg-[#007AFF] py-4 rounded-xl font-bold mb-8">+ إضافة منتج جديد</button>
+
+        <button 
+          onClick={() => setShowDialog(true)} 
+          className="w-full bg-[#007AFF] hover:bg-[#0062CC] py-4 rounded-xl font-bold mb-8 shadow-lg shadow-[#007AFF]/20 transition-all"
+        >
+          + إضافة هاتف جديد
+        </button>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {products.map(p => (
-            <div key={p.id} className="bg-[#1A1D29] rounded-2xl overflow-hidden border border-white/5 p-4">
-              <img src={p.image} className="w-full h-48 object-cover rounded-xl mb-4" alt="" />
-              <h3 className="font-bold text-lg">{p.name}</h3>
+            <div key={p.id} className="bg-[#1A1D29] rounded-2xl overflow-hidden border border-white/5 p-4 shadow-xl">
+              <img src={p.image} className="w-full h-48 object-cover rounded-xl mb-4 bg-black/20" alt="" />
+              <h3 className="font-bold text-lg mb-1">{p.name}</h3>
               <p className="text-[#007AFF] font-bold text-xl mb-4">{p.price} ريال</p>
-              <button onClick={() => {if(confirm("حذف؟")) deleteDoc(doc(db, "products", p.id)).then(fetchProducts)}} className="text-red-400 text-sm flex items-center gap-1"><Trash2 size={16}/> حذف المنتج</button>
+              <button 
+                onClick={async () => { if(confirm("حذف؟")) { await deleteDoc(doc(db, "products", p.id)); fetchProducts(); } }} 
+                className="text-red-400 text-sm flex items-center justify-center gap-2 bg-red-500/5 w-full py-2 rounded-lg"
+              >
+                <Trash2 size={16}/> حذف المنتج
+              </button>
             </div>
           ))}
         </div>
       </div>
 
       {showDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-          <div className="bg-[#1A1D29] w-full max-w-md rounded-2xl p-6 border border-white/10">
-            <h2 className="text-xl font-bold mb-6 text-center text-white">إضافة منتج</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#1A1D29] w-full max-w-md rounded-2xl p-6 border border-white/10 shadow-2xl">
+            <h2 className="text-xl font-bold mb-6 text-center">تفاصيل المنتج</h2>
             <div className="space-y-4">
-              <input placeholder="اسم الهاتف" value={name} onChange={(e)=>setName(e.target.value)} className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none" />
+              <input placeholder="اسم الهاتف" value={name} onChange={(e)=>setName(e.target.value)} className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none focus:border-[#007AFF]" />
               <input type="number" placeholder="السعر" value={price} onChange={(e)=>setPrice(e.target.value)} className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none" />
-              <input placeholder="رابط الصورة (URL)" value={imageUrl} onChange={(e)=>setImageUrl(e.target.value)} className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none" />
-              <button onClick={handleSave} className="w-full bg-[#007AFF] text-white py-3 rounded-lg font-bold">حفظ ونشر</button>
-              <button onClick={() => setShowDialog(false)} className="w-full text-white/40 text-sm">إلغاء</button>
+              <input placeholder="رابط الصورة المباشر (URL)" value={imageUrl} onChange={(e)=>setImageUrl(e.target.value)} className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none" />
+              <p className="text-[10px] text-white/30 text-center italic">ارفع الصورة يدوياً على أي موقع رفع صور وضع الرابط هنا</p>
+              <button onClick={handleSave} className="w-full bg-[#007AFF] text-white py-3 rounded-lg font-bold shadow-lg shadow-[#007AFF]/20">نشر في المتجر</button>
+              <button onClick={() => setShowDialog(false)} className="w-full text-white/40 text-sm py-2">إلغاء</button>
             </div>
           </div>
         </div>
