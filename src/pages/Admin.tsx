@@ -1,34 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Shield, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../lib/firebase';
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  Timestamp,
-} from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 /* =========================
-   Environment Variable
+   TEMP: IMGBB KEY
+   (سيعمل على Vercel)
 ========================= */
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY as string;
-
-if (!IMGBB_API_KEY) {
-  throw new Error('VITE_IMGBB_API_KEY is missing');
-}
-
-/* =========================
-   Types
-========================= */
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-};
+const IMGBB_API_KEY = '718ce8f58f751f5738ac206b786525e5';
 
 /* =========================
    Component
@@ -36,16 +16,18 @@ type Product = {
 export default function Admin() {
   const { logout } = useAuth();
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [showProductDialog, setShowProductDialog] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [showDialog, setShowDialog] = useState(false);
 
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState({
+    upload: false,
+    save: false,
+  });
 
   /* =========================
      Fetch Products
@@ -53,11 +35,7 @@ export default function Admin() {
   const fetchProducts = async () => {
     try {
       const snap = await getDocs(collection(db, 'products'));
-      const data: Product[] = snap.docs.map(docu => ({
-        id: docu.id,
-        ...(docu.data() as Omit<Product, 'id'>),
-      }));
-      setProducts(data);
+      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       console.error(err);
     }
@@ -68,41 +46,38 @@ export default function Admin() {
   }, []);
 
   /* =========================
-     Image Upload
+     Upload Image
   ========================= */
-  const handleImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleUpload = async (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImagePreview(URL.createObjectURL(file));
-    setUploading(true);
+    setPreview(URL.createObjectURL(file));
+    setLoading(prev => ({ ...prev, upload: true }));
 
-    const formData = new FormData();
-    formData.append('image', file);
+    const fd = new FormData();
+    fd.append('image', file);
 
     try {
       const res = await fetch(
         `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
         {
           method: 'POST',
-          body: formData,
+          body: fd,
         }
       );
 
       const data = await res.json();
-
-      if (!data.success) {
+      if (data.success) {
+        setImageUrl(data.data.url);
+      } else {
         throw new Error('Upload failed');
       }
-
-      setImageUrl(data.data.url);
     } catch (err) {
       console.error(err);
-      alert('حدث خطأ أثناء رفع الصورة');
+      alert('خطأ أثناء رفع الصورة');
     } finally {
-      setUploading(false);
+      setLoading(prev => ({ ...prev, upload: false }));
     }
   };
 
@@ -111,32 +86,32 @@ export default function Admin() {
   ========================= */
   const handleSave = async () => {
     if (!name || !price || !imageUrl) {
-      alert('يرجى إدخال جميع البيانات');
+      alert('أكمل جميع البيانات');
       return;
     }
 
-    setSaving(true);
+    setLoading(prev => ({ ...prev, save: true }));
 
     try {
       await addDoc(collection(db, 'products'), {
         name,
         price: Number(price),
         image: imageUrl,
-        createdAt: Timestamp.now(),
+        createdAt: new Date(),
       });
 
-      setShowProductDialog(false);
+      setShowDialog(false);
       setName('');
       setPrice('');
       setImageUrl('');
-      setImagePreview(null);
+      setPreview(null);
 
       fetchProducts();
     } catch (err) {
       console.error(err);
-      alert('حدث خطأ أثناء الحفظ');
+      alert('خطأ أثناء حفظ المنتج');
     } finally {
-      setSaving(false);
+      setLoading(prev => ({ ...prev, save: false }));
     }
   };
 
@@ -147,22 +122,25 @@ export default function Admin() {
     <div className="min-h-screen bg-[#0F111A] text-white p-6" dir="rtl">
       <div className="max-w-4xl mx-auto pt-20">
         {/* Header */}
-        <div className="flex justify-between items-center bg-[#1A1D29] p-4 rounded-xl mb-6 border border-white/5">
-          <div className="flex items-center gap-2">
-            <Shield className="text-[#007AFF] w-6 h-6" />
-            <h1 className="font-bold">لوحة تحكم دب فون</h1>
+        <div className="flex justify-between items-center bg-[#1A1D29] p-5 rounded-2xl mb-8 border border-white/5">
+          <div className="flex items-center gap-3">
+            <Shield className="text-[#007AFF] w-7 h-7" />
+            <h1 className="text-xl font-bold">لوحة تحكم دب فون</h1>
           </div>
-          <button onClick={logout} className="text-red-400 text-sm">
+          <button
+            onClick={logout}
+            className="text-red-400 font-medium hover:text-red-300"
+          >
             خروج
           </button>
         </div>
 
-        {/* Add Product */}
+        {/* Add Button */}
         <button
-          onClick={() => setShowProductDialog(true)}
-          className="w-full bg-[#007AFF] py-4 rounded-xl font-bold mb-8 shadow-lg shadow-[#007AFF]/20"
+          onClick={() => setShowDialog(true)}
+          className="w-full bg-[#007AFF] hover:bg-[#0062CC] py-4 rounded-2xl font-bold mb-10 shadow-lg shadow-[#007AFF]/20 flex items-center justify-center gap-2"
         >
-          + إضافة هاتف جديد
+          <PlusIcon /> إضافة هاتف جديد
         </button>
 
         {/* Products */}
@@ -170,29 +148,26 @@ export default function Admin() {
           {products.map(p => (
             <div
               key={p.id}
-              className="bg-[#1A1D29] rounded-2xl overflow-hidden border border-white/5 p-4"
+              className="bg-[#1A1D29] rounded-3xl border border-white/5 p-4"
             >
               <img
                 src={p.image}
-                className="w-full h-48 object-cover rounded-xl mb-4"
-                alt={p.name}
+                className="w-full h-52 object-cover rounded-2xl mb-4"
               />
               <h3 className="font-bold text-lg">{p.name}</h3>
-              <p className="text-[#007AFF] font-bold text-xl mb-4">
+              <p className="text-[#007AFF] font-black text-xl mb-4">
                 {p.price} ريال
               </p>
-
               <button
                 onClick={async () => {
-                  if (confirm('هل أنت متأكد من حذف المنتج؟')) {
+                  if (confirm('حذف المنتج؟')) {
                     await deleteDoc(doc(db, 'products', p.id));
                     fetchProducts();
                   }
                 }}
-                className="text-red-400 flex items-center gap-2 text-sm bg-red-500/5 p-2 rounded-lg w-full justify-center"
+                className="bg-red-500/10 p-2 rounded-xl text-red-400 hover:bg-red-500 hover:text-white w-full flex justify-center gap-2"
               >
-                <Trash2 size={16} />
-                حذف المنتج
+                <Trash2 size={18} /> حذف
               </button>
             </div>
           ))}
@@ -200,35 +175,34 @@ export default function Admin() {
       </div>
 
       {/* Dialog */}
-      {showProductDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#1A1D29] w-full max-w-md rounded-2xl p-6 border border-white/10">
-            <h2 className="text-xl font-bold mb-6 text-center">
-              تفاصيل الهاتف
+      {showDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+          <div className="bg-[#1A1D29] w-full max-w-md rounded-3xl p-8 border border-white/10">
+            <h2 className="text-2xl font-bold mb-6 text-center">
+              إضافة منتج جديد
             </h2>
 
-            <div className="space-y-4">
-              {/* Image */}
+            <div className="space-y-5">
               <div
                 onClick={() =>
                   document.getElementById('imgInp')?.click()
                 }
-                className="border-2 border-dashed border-white/10 rounded-xl h-44 flex items-center justify-center cursor-pointer bg-white/5 overflow-hidden relative"
+                className="border-2 border-dashed border-white/10 rounded-2xl h-48 flex items-center justify-center cursor-pointer relative overflow-hidden"
               >
-                {imagePreview ? (
+                {preview ? (
                   <>
                     <img
-                      src={imagePreview}
+                      src={preview}
                       className="w-full h-full object-cover"
                     />
-                    {uploading && (
+                    {loading.upload && (
                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                         <Loader2 className="animate-spin text-[#007AFF]" />
                       </div>
                     )}
                   </>
                 ) : (
-                  <ImageIcon className="opacity-20 w-10 h-10" />
+                  <ImageIcon className="opacity-20 w-12 h-12" />
                 )}
               </div>
 
@@ -237,14 +211,14 @@ export default function Admin() {
                 type="file"
                 hidden
                 accept="image/*"
-                onChange={handleImageUpload}
+                onChange={handleUpload}
               />
 
               <input
                 placeholder="اسم الهاتف"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none focus:border-[#007AFF]"
+                className="w-full bg-[#0F111A] p-4 rounded-2xl border border-white/10"
               />
 
               <input
@@ -252,20 +226,20 @@ export default function Admin() {
                 placeholder="السعر"
                 value={price}
                 onChange={e => setPrice(e.target.value)}
-                className="w-full bg-[#0F111A] text-white border border-white/10 rounded-lg p-3 outline-none"
+                className="w-full bg-[#0F111A] p-4 rounded-2xl border border-white/10"
               />
 
               <button
                 onClick={handleSave}
-                disabled={uploading || saving}
-                className="w-full bg-[#007AFF] text-white py-3 rounded-lg font-bold disabled:opacity-50"
+                disabled={loading.upload || loading.save}
+                className="w-full bg-[#007AFF] py-4 rounded-2xl font-bold disabled:opacity-50"
               >
-                {saving ? 'جاري الحفظ...' : 'نشر المنتج الآن'}
+                {loading.save ? 'جاري الحفظ...' : 'نشر المنتج'}
               </button>
 
               <button
-                onClick={() => setShowProductDialog(false)}
-                className="w-full text-white/40 text-sm py-2"
+                onClick={() => setShowDialog(false)}
+                className="w-full text-white/40 text-sm"
               >
                 إلغاء
               </button>
@@ -274,5 +248,26 @@ export default function Admin() {
         </div>
       )}
     </div>
+  );
+}
+
+/* =========================
+   Plus Icon
+========================= */
+function PlusIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
   );
 }
