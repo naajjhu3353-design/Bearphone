@@ -4,9 +4,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase'; 
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  createdAt?: Date;
+}
+
 export default function Admin() {
   const { user } = useAuth();
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -19,9 +27,12 @@ export default function Admin() {
   const fetchProducts = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'products'));
-      const productsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const productsData = querySnapshot.docs.map(document => ({
+        id: document.id,
+        name: document.data().name as string,
+        price: document.data().price as number,
+        image: document.data().image as string,
+        createdAt: document.data().createdAt?.toDate()
       }));
       setProducts(productsData);
     } catch (error) {
@@ -54,7 +65,7 @@ export default function Admin() {
     }
   };
 
-  const handleDelete = async (productId) => {
+  const handleDelete = async (productId: string) => {
     if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
       try {
         await deleteDoc(doc(db, 'products', productId));
@@ -82,7 +93,7 @@ export default function Admin() {
         </button>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map(p => (
+          {products.map((p) => (
             <div 
               key={p.id} 
               className="bg-[#1A1D29] rounded-2xl overflow-hidden border border-white/5 p-4 shadow-xl hover:border-white/10 transition-all"
@@ -91,8 +102,8 @@ export default function Admin() {
                 src={p.image} 
                 className="w-full h-48 object-cover rounded-xl mb-4 bg-black/20" 
                 alt={p.name}
-                onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/400x300?text=No+Image';
                 }}
               />
               <h3 className="font-bold text-lg mb-1">{p.name}</h3>
