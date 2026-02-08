@@ -1,192 +1,244 @@
+// Firebase configuration
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
+import { createContext, useContext, ReactNode } from "react";
+
+interface AuthContextType {
+  currentUser: any;
+  login?: () => void;
+  logout?: () => void;
+}
+
+const AuthContext = createContext<AuthContextType>({ currentUser: null });
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // هنا يمكنك ربط Firebase Auth إذا أردت لاحقًا
+  const value = { currentUser: null };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => useContext(AuthContext);
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
-import "./i18n";
+import { collection, addDoc, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { db } from "../config/firebase";
+import { useAuth } from "../contexts/authContext";
+import { Trash2, Upload, Plus, Loader2 } from "lucide-react";
 
-// Layout Components
-import Header from "./components/layout/Header";
-import Footer from "./components/layout/Footer";
-
-// Common Components
-import WhatsAppButton from "./components/common/WhatsAppButton";
-
-// Sections
-import Hero from "./sections/Hero";
-import Store from "./sections/Store";
-import Services from "./sections/Services";
-import SellDevice from "./sections/SellDevice";
-import OrderTracking from "./sections/OrderTracking";
-
-// Pages
-import Admin from "./pages/Admin";
-
-// Context
-import { AuthProvider } from "./contexts/authContext";
-
-// Loading Screen
-function LoadingScreen({ onComplete }: { onComplete: () => void }) {
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 2500);
-    return () => clearTimeout(timer);
-  }, [onComplete]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
-      className="fixed inset-0 z-[100] bg-carbon flex flex-col items-center justify-center"
-    >
-      {/* Bear Claw Spinner */}
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        className="relative"
-      >
-        <img
-          src="/bear-claw.png"
-          alt="Loading..."
-          className="w-24 h-24 object-contain opacity-80"
-        />
-        <div className="absolute inset-0 bg-electric-blue/20 blur-xl rounded-full animate-pulse" />
-      </motion.div>
-
-      {/* Text */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="mt-8 text-center"
-      >
-        <h2 className="text-2xl font-bold text-white mb-2 tracking-wider">
-          BEAR PHONE
-        </h2>
-        <p className="text-gray-400 text-sm">{t("loading.system")}</p>
-      </motion.div>
-    </motion.div>
-  );
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
 }
 
-// Main Content
-function MainContent({
-  currentPage,
-  onNavigate,
-}: {
-  currentPage: string;
-  onNavigate: (page: string) => void;
-}) {
-  const pageVariants = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 },
-  };
+export default function Admin() {
+  const { currentUser } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", imageUrl: "" });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case "home":
-        return <Hero onNavigate={onNavigate} />;
-      case "store":
-      case "phones":
-      case "accessories":
-        return <Store onNavigate={onNavigate} />;
-      case "services":
-      case "bear-hunt":
-        return <Services />;
-      case "sell-device":
-        return <SellDevice />;
-      case "track-order":
-        return <OrderTracking />;
-      case "admin":
-        return <Admin />;
-      default:
-        return <Hero onNavigate={onNavigate} />;
-    }
-  };
-
-  return (
-    <AnimatePresence mode="wait">
-      <motion.main
-        key={currentPage}
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={{ duration: 0.3 }}
-        className="min-h-screen"
-      >
-        {renderPage()}
-      </motion.main>
-    </AnimatePresence>
-  );
-}
-
-function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState("home");
-  const { i18n } = useTranslation();
-
-  // Set initial direction
   useEffect(() => {
-    document.dir = i18n.language === "ar" ? "rtl" : "ltr";
-  }, [i18n.language]);
-
-  // URL Parameter Logic (Admin Access)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pageParam = params.get("page");
-    const validPages = [
-      "home",
-      "store",
-      "phones",
-      "accessories",
-      "services",
-      "bear-hunt",
-      "sell-device",
-      "track-order",
-      "admin",
-    ];
-    if (pageParam && validPages.includes(pageParam)) {
-      setCurrentPage(pageParam);
-    }
+    fetchProducts();
   }, []);
 
-  const handleNavigate = (page: string) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-
-    // Update URL
-    const url = new URL(window.location.href);
-    if (page === "home") url.searchParams.delete("page");
-    else url.searchParams.set("page", page);
-    window.history.pushState({}, "", url);
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const productsData: Product[] = [];
+      querySnapshot.forEach((docu) => {
+        productsData.push({ id: docu.id, ...(docu.data() as Omit<Product, "id">) });
+      });
+      setProducts(productsData);
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load products.");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImageToImgbb = async (file: File): Promise<string> => {
+    const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+    if (!apiKey) throw new Error("IMGBB API key not found");
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!data.success) throw new Error("Image upload failed");
+    return data.data.url;
+  };
+
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProduct.name || !newProduct.price || !selectedImage) return setError("Fill all fields");
+
+    try {
+      setSaving(true);
+      setError("");
+      setUploading(true);
+      const imageUrl = await uploadImageToImgbb(selectedImage);
+      setUploading(false);
+
+      await addDoc(collection(db, "products"), {
+        name: newProduct.name,
+        price: parseFloat(newProduct.price),
+        imageUrl,
+        createdAt: new Date().toISOString(),
+      });
+
+      setSuccess("Product added!");
+      setNewProduct({ name: "", price: "", imageUrl: "" });
+      setSelectedImage(null);
+      setImagePreview("");
+      await fetchProducts();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to add product");
+    } finally {
+      setSaving(false);
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm("Are you sure?")) return;
+    try {
+      await deleteDoc(doc(db, "products", id));
+      setSuccess("Product deleted!");
+      await fetchProducts();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete product");
+    }
+  };
+
+  if (!currentUser)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Please log in to access Admin Panel.</p>
+      </div>
+    );
+
+  return (
+    <div className="min-h-screen p-6 bg-gray-100">
+      <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
+
+      {error && <div className="p-3 bg-red-100 text-red-700 mb-4 rounded">{error}</div>}
+      {success && <div className="p-3 bg-green-100 text-green-700 mb-4 rounded">{success}</div>}
+
+      {/* Add Product Form */}
+      <form onSubmit={handleAddProduct} className="bg-white p-6 rounded-lg mb-8 shadow-md space-y-4">
+        <input
+          type="text"
+          placeholder="Product Name"
+          value={newProduct.name}
+          onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+          className="w-full p-2 border rounded"
+          disabled={saving}
+        />
+        <input
+          type="number"
+          placeholder="Price"
+          value={newProduct.price}
+          onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+          className="w-full p-2 border rounded"
+          disabled={saving}
+        />
+        <input type="file" accept="image/*" onChange={handleImageSelect} disabled={saving} />
+        {imagePreview && <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover mt-2 rounded" />}
+        <button
+          type="submit"
+          disabled={saving || uploading}
+          className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2"
+        >
+          {saving ? "Saving..." : <><Plus /> Add Product</>}
+        </button>
+      </form>
+
+      {/* Products List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products.map((p) => (
+          <div key={p.id} className="border p-4 rounded shadow">
+            <img src={p.imageUrl} alt={p.name} className="w-full h-48 object-cover mb-2 rounded" />
+            <h3 className="font-bold">{p.name}</h3>
+            <p className="text-blue-600 font-semibold">${p.price.toFixed(2)}</p>
+            <button
+              onClick={() => handleDeleteProduct(p.id)}
+              className="mt-2 px-3 py-1 bg-red-600 text-white rounded flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AuthProvider } from "./contexts/authContext";
+import Admin from "./pages/Admin";
+
+function App() {
+  const [currentPage, setCurrentPage] = useState("home");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-carbon">
-        <AnimatePresence>
-          {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
-        </AnimatePresence>
-
-        {!isLoading && (
-          <>
-            {currentPage !== "admin" && (
-              <Header onNavigate={handleNavigate} currentPage={currentPage} />
-            )}
-
-            <MainContent currentPage={currentPage} onNavigate={handleNavigate} />
-
-            {currentPage !== "admin" && (
-              <>
-                <Footer onNavigate={handleNavigate} />
-                <WhatsAppButton />
-              </>
-            )}
-          </>
+      <AnimatePresence>
+        {isLoading ? (
+          <motion.div className="min-h-screen flex items-center justify-center">
+            Loading...
+          </motion.div>
+        ) : currentPage === "admin" ? (
+          <Admin />
+        ) : (
+          <div className="min-h-screen p-4">Main App Content Here</div>
         )}
-      </div>
+      </AnimatePresence>
     </AuthProvider>
   );
 }
